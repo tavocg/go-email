@@ -31,10 +31,10 @@ var strictParserEmailRegexp = regexp.MustCompile(`^(?:[A-Za-z0-9](?:[A-Za-z0-9+\
 
 // StrictParser trims surrounding whitespace and validates the address against
 // the package's strict rules.
-func StrictParser(email string) (valid *validAddress, err error) {
+func StrictParser(email string) (valid *ValidAddress, err error) {
 	email = strings.TrimSpace(email)
 	if len(email) <= 63 && strictParserEmailRegexp.MatchString(email) {
-		v := validAddress(email)
+		v := ValidAddress(email)
 		return &v, nil
 	}
 	return nil, StrictParserError
