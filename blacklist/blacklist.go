@@ -1,4 +1,7 @@
-// Package blacklist loads blacklisted domains into memory
+// Package blacklist loads blacklisted domains into memory.
+//
+// Default blocklist used here can be found at:
+// https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains.txt
 package blacklist
 
 import (
