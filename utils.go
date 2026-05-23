@@ -21,11 +21,11 @@ func (v *ValidAddress) Address() string {
 //
 // Apply the same normalization anywhere the address is stored, matched, or used
 // for verification so those operations stay consistent.
-func (v *ValidAddress) Normalize() string {
+func (v *ValidAddress) Normalize() {
 	email := strings.ToLower(v.Address())
 	user, host, _ := strings.Cut(email, "@")
 	user, _, _ = strings.Cut(user, "+")
-	return user + "@" + host
+	*v = ValidAddress(user + "@" + host)
 }
 
 // IsBlacklisted reports whether the receiver's domain matches any blacklist
