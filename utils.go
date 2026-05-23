@@ -44,7 +44,3 @@ func (v *ValidAddress) IsBlacklisted(blacklists ...[]string) bool {
 
 	return false
 }
-
-// validAddress remains as a private alias to avoid breaking internal package
-// references while the exported name is adopted.
-type validAddress = ValidAddress
