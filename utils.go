@@ -7,15 +7,21 @@ import (
 	"github.com/tavocg/go-email/blacklist"
 )
 
-// validAddress implements Normalize(email string) string, it is private to
-// avoid using Normalize on non-valid email addresses.
-type validAddress string
+// DefaultBlacklist contains the embedded disposable-domain list loaded by the
+// blacklist package at startup. Reassign it if you need a different default.
+var DefaultBlacklist = blacklist.DefaultDomains
+
+// ValidAddress is an email address that has already passed package validation.
+//
+// It exists so Normalize can be limited to addresses returned by the package
+// parsers instead of arbitrary strings.
+type ValidAddress string
 
 // Normalize canonicalizes an email address for storage and comparison.
 //
 // Apply the same normalization anywhere the address is stored, matched, or used
 // for verification so those operations stay consistent.
-func (v *validAddress) Normalize(email string) string {
+func (v *ValidAddress) Normalize(email string) string {
 	email = strings.ToLower(email)
 	user, host, _ := strings.Cut(email, "@")
 	user, _, _ = strings.Cut(user, "+")
@@ -24,10 +30,10 @@ func (v *validAddress) Normalize(email string) string {
 
 // IsBlacklisted reports whether the receiver's domain matches any blacklist
 // entry. When no custom blacklist is provided, it falls back to DefaultBlacklist.
-func (v *validAddress) IsBlacklisted(blacklists ...[]string) bool {
+func (v *ValidAddress) IsBlacklisted(blacklists ...[]string) bool {
 	lists := blacklists
 	if len(lists) == 0 {
-		lists = [][]string{blacklist.DefaultDomains}
+		lists = [][]string{DefaultBlacklist}
 	}
 
 	// No need to check if host part is found since this is already a valid
@@ -42,3 +48,7 @@ func (v *validAddress) IsBlacklisted(blacklists ...[]string) bool {
 
 	return false
 }
+
+// validAddress remains as a private alias to avoid breaking internal package
+// references while the exported name is adopted.
+type validAddress = ValidAddress
