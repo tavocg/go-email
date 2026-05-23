@@ -7,10 +7,6 @@ import (
 	"github.com/tavocg/go-email/blacklist"
 )
 
-// DefaultBlacklist contains the embedded disposable-domain list loaded by the
-// blacklist package at startup. Reassign it if you need a different default.
-var DefaultBlacklist = blacklist.DefaultDomains
-
 // ValidAddress is an email address that has already passed package validation.
 //
 // It exists so Normalize can be limited to addresses returned by the package
@@ -33,7 +29,7 @@ func (v *ValidAddress) Normalize(email string) string {
 func (v *ValidAddress) IsBlacklisted(blacklists ...[]string) bool {
 	lists := blacklists
 	if len(lists) == 0 {
-		lists = [][]string{DefaultBlacklist}
+		lists = [][]string{blacklist.DefaultDomains}
 	}
 
 	// No need to check if host part is found since this is already a valid
