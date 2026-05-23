@@ -13,12 +13,16 @@ import (
 // parsers instead of arbitrary strings.
 type ValidAddress string
 
-// Normalize canonicalizes an email address for storage and comparison.
+func (v *ValidAddress) Address() string {
+	return string(*v)
+}
+
+// Normalize canonicalizes the receiver for storage and comparison.
 //
 // Apply the same normalization anywhere the address is stored, matched, or used
 // for verification so those operations stay consistent.
-func (v *ValidAddress) Normalize(email string) string {
-	email = strings.ToLower(email)
+func (v *ValidAddress) Normalize() string {
+	email := strings.ToLower(v.Address())
 	user, host, _ := strings.Cut(email, "@")
 	user, _, _ = strings.Cut(user, "+")
 	return user + "@" + host
@@ -34,7 +38,7 @@ func (v *ValidAddress) IsBlacklisted(blacklists ...[]string) bool {
 
 	// No need to check if host part is found since this is already a valid
 	// email address.
-	_, domain, _ := strings.Cut(strings.ToLower(string(*v)), "@")
+	_, domain, _ := strings.Cut(strings.ToLower(v.Address()), "@")
 
 	for _, blacklist := range lists {
 		if slices.Contains(blacklist, domain) {
