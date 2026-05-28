@@ -118,7 +118,7 @@ func (m *Message) Bytes() ([]byte, error) {
 	if len(m.Recipients()) == 0 {
 		return nil, ErrMissingRecipients
 	}
-	if m.PlainBody == "" && m.HTMLBody == "" && len(m.Attachments) == 0 {
+	if m.PlainBody == "" && m.HTMLBody == "" {
 		return nil, ErrMessageMissingBody
 	}
 

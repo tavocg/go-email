@@ -8,7 +8,7 @@ func (e errString) Error() string {
 
 const (
 	ErrInvalidAddress     errString = "smtp address must be in host:port form"
-	ErrMessageMissingBody errString = "message must have a body or at least one attachment"
+	ErrMessageMissingBody errString = "message must have a body"
 	ErrMessageMissingFrom errString = "message must have a from address"
 	ErrMissingAuth        errString = "smtp server does not advertise AUTH"
 	ErrMissingRecipients  errString = "message must have at least one recipient"
