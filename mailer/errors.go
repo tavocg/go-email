@@ -1,4 +1,4 @@
-package smtp
+package mailer
 
 type errString string
 

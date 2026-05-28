@@ -1,4 +1,4 @@
-// Package smtp crafts messages and sends email
+// Package smtp sends mail through SMTP.
 package smtp
 
 import (
@@ -7,6 +7,8 @@ import (
 	"net"
 	"net/smtp"
 	"time"
+
+	"github.com/tavocg/go-email/mailer"
 )
 
 const (
@@ -59,12 +61,12 @@ func WithStartTLS() Option {
 // NewClient creates a Client and verifies the configured encrypted transport.
 func NewClient(ctx context.Context, address, user, password string, opts ...Option) (*Client, error) {
 	if ctx == nil {
-		return nil, ErrNilContext
+		return nil, mailer.ErrNilContext
 	}
 
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		return nil, ErrInvalidAddress
+		return nil, mailer.ErrInvalidAddress
 	}
 
 	client := &Client{
@@ -97,22 +99,22 @@ func NewClient(ctx context.Context, address, user, password string, opts ...Opti
 }
 
 // Send delivers the message using the configured encrypted transport.
-func (c *Client) Send(ctx context.Context, message *Message) error {
+func (c *Client) Send(ctx context.Context, message *mailer.Message) error {
 	if ctx == nil {
-		return ErrNilContext
+		return mailer.ErrNilContext
 	}
 	if message == nil {
-		return ErrNilMessage
+		return mailer.ErrNilMessage
 	}
 
-	data, err := message.bytes()
+	data, err := message.Bytes()
 	if err != nil {
 		return err
 	}
 
-	recipients := message.recipients()
+	recipients := message.Recipients()
 	if len(recipients) == 0 {
-		return ErrMissingRecipients
+		return mailer.ErrMissingRecipients
 	}
 
 	if c.startTLS {
@@ -123,7 +125,7 @@ func (c *Client) Send(ctx context.Context, message *Message) error {
 
 func (c *Client) checkTransport(ctx context.Context) error {
 	if ctx == nil {
-		return ErrNilContext
+		return mailer.ErrNilContext
 	}
 
 	if c.startTLS {
@@ -147,7 +149,7 @@ func (c *Client) checkStartTLS(ctx context.Context) error {
 	defer client.Close()
 
 	if ok, _ := client.Extension(ExtensionStartTLS); !ok {
-		return ErrMissingStartTLS
+		return mailer.ErrMissingStartTLS
 	}
 	if err := client.StartTLS(c.tlsConfig.Clone()); err != nil {
 		return err
@@ -186,7 +188,7 @@ func (c *Client) sendStartTLS(ctx context.Context, from string, recipients []str
 	defer client.Close()
 
 	if ok, _ := client.Extension(ExtensionStartTLS); !ok {
-		return ErrMissingStartTLS
+		return mailer.ErrMissingStartTLS
 	}
 
 	if err := client.StartTLS(c.tlsConfig.Clone()); err != nil {
@@ -216,7 +218,7 @@ func (c *Client) sendImplicitTLS(ctx context.Context, from string, recipients []
 func (c *Client) deliver(client *smtp.Client, from string, recipients []string, data []byte) error {
 	if c.User != "" || c.Password != "" {
 		if ok, _ := client.Extension("AUTH"); !ok {
-			return ErrMissingAuth
+			return mailer.ErrMissingAuth
 		}
 		if err := client.Auth(smtp.PlainAuth("", c.User, c.Password, c.serverName)); err != nil {
 			return err

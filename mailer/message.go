@@ -1,4 +1,4 @@
-package smtp
+package mailer
 
 import (
 	"bytes"
@@ -23,10 +23,10 @@ type Message struct {
 	Bcc     []string
 	Subject string
 
-	plainBody string
-	htmlBody  string
+	PlainBody string
+	HTMLBody  string
 
-	attachments []Attachment
+	Attachments []Attachment
 }
 
 // Attachment stores the bytes and metadata needed for a MIME attachment.
@@ -42,7 +42,7 @@ func NewPlainMessage(from string, to []string, subject, body string) *Message {
 		From:      from,
 		To:        append([]string(nil), to...),
 		Subject:   subject,
-		plainBody: body,
+		PlainBody: body,
 	}
 }
 
@@ -52,7 +52,7 @@ func NewHTMLMessage(from string, to []string, subject, body string) *Message {
 		From:     from,
 		To:       append([]string(nil), to...),
 		Subject:  subject,
-		htmlBody: body,
+		HTMLBody: body,
 	}
 }
 
@@ -63,8 +63,8 @@ func NewAlternativeMessage(from string, to []string, subject, plainBody, htmlBod
 		From:      from,
 		To:        append([]string(nil), to...),
 		Subject:   subject,
-		plainBody: plainBody,
-		htmlBody:  htmlBody,
+		PlainBody: plainBody,
+		HTMLBody:  htmlBody,
 	}
 }
 
@@ -78,7 +78,7 @@ func (m *Message) Attach(filename string, content []byte) {
 		}
 	}
 
-	m.attachments = append(m.attachments, Attachment{
+	m.Attachments = append(m.Attachments, Attachment{
 		Filename:    filename,
 		ContentType: contentType,
 		Content:     content,
@@ -91,14 +91,15 @@ func (m *Message) AttachWithType(filename, contentType string, content []byte) {
 		contentType = "application/octet-stream"
 	}
 
-	m.attachments = append(m.attachments, Attachment{
+	m.Attachments = append(m.Attachments, Attachment{
 		Filename:    filename,
 		ContentType: contentType,
 		Content:     content,
 	})
 }
 
-func (m *Message) recipients() []string {
+// Recipients returns all envelope recipients, including Bcc recipients.
+func (m *Message) Recipients() []string {
 	recipients := make([]string, 0, len(m.To)+len(m.Cc)+len(m.Bcc))
 	recipients = append(recipients, m.To...)
 	recipients = append(recipients, m.Cc...)
@@ -106,17 +107,18 @@ func (m *Message) recipients() []string {
 	return recipients
 }
 
-func (m *Message) bytes() ([]byte, error) {
+// Bytes renders the message as MIME bytes suitable for SMTP DATA.
+func (m *Message) Bytes() ([]byte, error) {
 	if m == nil {
 		return nil, ErrNilMessage
 	}
 	if strings.TrimSpace(m.From) == "" {
 		return nil, ErrMessageMissingFrom
 	}
-	if len(m.recipients()) == 0 {
+	if len(m.Recipients()) == 0 {
 		return nil, ErrMissingRecipients
 	}
-	if m.plainBody == "" && m.htmlBody == "" && len(m.attachments) == 0 {
+	if m.PlainBody == "" && m.HTMLBody == "" && len(m.Attachments) == 0 {
 		return nil, ErrMessageMissingBody
 	}
 
@@ -145,14 +147,14 @@ func (m *Message) bytes() ([]byte, error) {
 
 func (m *Message) buildBody() (string, string, []byte, error) {
 	switch {
-	case len(m.attachments) > 0:
+	case len(m.Attachments) > 0:
 		return m.buildMixedBody()
-	case m.plainBody != "" && m.htmlBody != "":
+	case m.PlainBody != "" && m.HTMLBody != "":
 		return m.buildAlternativeBody()
-	case m.htmlBody != "":
-		return "text/html; charset=UTF-8", "quoted-printable", encodeTextBody(m.htmlBody), nil
+	case m.HTMLBody != "":
+		return "text/html; charset=UTF-8", "quoted-printable", encodeTextBody(m.HTMLBody), nil
 	default:
-		return "text/plain; charset=UTF-8", "quoted-printable", encodeTextBody(m.plainBody), nil
+		return "text/plain; charset=UTF-8", "quoted-printable", encodeTextBody(m.PlainBody), nil
 	}
 }
 
@@ -164,7 +166,7 @@ func (m *Message) buildMixedBody() (string, string, []byte, error) {
 		return "", "", nil, err
 	}
 
-	for _, attachment := range m.attachments {
+	for _, attachment := range m.Attachments {
 		headers := textHeaders(
 			"Content-Type", attachmentMediaType(attachment),
 			"Content-Disposition", formatMediaType("attachment", map[string]string{"filename": attachment.Filename}),
@@ -191,10 +193,10 @@ func (m *Message) buildAlternativeBody() (string, string, []byte, error) {
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 
-	if err := writeTextPart(writer, "plain", m.plainBody); err != nil {
+	if err := writeTextPart(writer, "plain", m.PlainBody); err != nil {
 		return "", "", nil, err
 	}
-	if err := writeTextPart(writer, "html", m.htmlBody); err != nil {
+	if err := writeTextPart(writer, "html", m.HTMLBody); err != nil {
 		return "", "", nil, err
 	}
 	if err := writer.Close(); err != nil {
@@ -206,14 +208,14 @@ func (m *Message) buildAlternativeBody() (string, string, []byte, error) {
 
 func (m *Message) writeInlineBody(writer *multipart.Writer) error {
 	switch {
-	case m.plainBody != "" && m.htmlBody != "":
+	case m.PlainBody != "" && m.HTMLBody != "":
 		var body bytes.Buffer
 		alternative := multipart.NewWriter(&body)
 
-		if err := writeTextPart(alternative, "plain", m.plainBody); err != nil {
+		if err := writeTextPart(alternative, "plain", m.PlainBody); err != nil {
 			return err
 		}
-		if err := writeTextPart(alternative, "html", m.htmlBody); err != nil {
+		if err := writeTextPart(alternative, "html", m.HTMLBody); err != nil {
 			return err
 		}
 		if err := alternative.Close(); err != nil {
@@ -229,10 +231,10 @@ func (m *Message) writeInlineBody(writer *multipart.Writer) error {
 		}
 		_, err = part.Write(body.Bytes())
 		return err
-	case m.htmlBody != "":
-		return writeTextPart(writer, "html", m.htmlBody)
-	case m.plainBody != "":
-		return writeTextPart(writer, "plain", m.plainBody)
+	case m.HTMLBody != "":
+		return writeTextPart(writer, "html", m.HTMLBody)
+	case m.PlainBody != "":
+		return writeTextPart(writer, "plain", m.PlainBody)
 	default:
 		return nil
 	}
