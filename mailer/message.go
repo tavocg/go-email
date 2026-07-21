@@ -121,6 +121,9 @@ func (m *Message) Bytes() ([]byte, error) {
 	if m.PlainBody == "" && m.HTMLBody == "" {
 		return nil, ErrMessageMissingBody
 	}
+	if err := m.validateHeaders(); err != nil {
+		return nil, err
+	}
 
 	contentType, transferEncoding, body, err := m.buildBody()
 	if err != nil {
@@ -143,6 +146,26 @@ func (m *Message) Bytes() ([]byte, error) {
 	buffer.WriteString("\r\n")
 	buffer.Write(body)
 	return buffer.Bytes(), nil
+}
+
+func (m *Message) validateHeaders() error {
+	if hasHeaderNewline(m.From) || hasHeaderNewline(m.Subject) {
+		return ErrInvalidHeader
+	}
+
+	for _, recipient := range m.Recipients() {
+		if hasHeaderNewline(recipient) {
+			return ErrInvalidHeader
+		}
+	}
+
+	for _, attachment := range m.Attachments {
+		if hasHeaderNewline(attachment.Filename) || hasHeaderNewline(attachment.ContentType) {
+			return ErrInvalidHeader
+		}
+	}
+
+	return nil
 }
 
 func (m *Message) buildBody() (string, string, []byte, error) {
@@ -310,6 +333,10 @@ func isASCII(value string) bool {
 		}
 	}
 	return true
+}
+
+func hasHeaderNewline(value string) bool {
+	return strings.ContainsAny(value, "\r\n")
 }
 
 func formatMediaType(mediaType string, params map[string]string) string {
