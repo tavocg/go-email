@@ -19,10 +19,9 @@ const (
 
 // Client sends email over either implicit TLS or STARTTLS.
 type Client struct {
-	Address  string
-	User     string
-	Password string
-
+	address    string
+	user       string
+	password   string
 	timeout    time.Duration
 	tlsConfig  *tls.Config
 	startTLS   bool
@@ -32,7 +31,7 @@ type Client struct {
 // Option customizes a Client during construction.
 type Option func(*Client)
 
-// WithTimeout sets the dial and probe timeout used by the client.
+// WithTimeout sets the dial timeout used by the client.
 func WithTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
 		if timeout > 0 {
@@ -58,21 +57,17 @@ func WithStartTLS() Option {
 	}
 }
 
-// NewClient creates a Client and verifies the configured encrypted transport.
-func NewClient(ctx context.Context, address, user, password string, opts ...Option) (*Client, error) {
-	if ctx == nil {
-		return nil, mailer.ErrNilContext
-	}
-
+// NewClient creates a Client from the supplied SMTP configuration.
+func NewClient(address, user, password string, opts ...Option) (*Client, error) {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {
 		return nil, mailer.ErrInvalidAddress
 	}
 
 	client := &Client{
-		Address:    address,
-		User:       user,
-		Password:   password,
+		address:    address,
+		user:       user,
+		password:   password,
 		timeout:    10 * time.Second,
 		serverName: host,
 	}
@@ -91,11 +86,22 @@ func NewClient(ctx context.Context, address, user, password string, opts ...Opti
 		client.tlsConfig.ServerName = host
 	}
 
-	if err := client.checkTransport(ctx); err != nil {
-		return nil, err
-	}
-
 	return client, nil
+}
+
+// Address returns the configured SMTP server address.
+func (c *Client) Address() string {
+	return c.address
+}
+
+// User returns the configured SMTP username.
+func (c *Client) User() string {
+	return c.user
+}
+
+// StartTLS reports whether the client is configured to use STARTTLS.
+func (c *Client) StartTLS() bool {
+	return c.startTLS
 }
 
 // Send delivers the message using the configured encrypted transport.
@@ -123,7 +129,8 @@ func (c *Client) Send(ctx context.Context, message *mailer.Message) error {
 	return c.sendImplicitTLS(ctx, message.From, recipients, data)
 }
 
-func (c *Client) checkTransport(ctx context.Context) error {
+// CheckTransport verifies that the configured encrypted transport is available.
+func (c *Client) CheckTransport(ctx context.Context) error {
 	if ctx == nil {
 		return mailer.ErrNilContext
 	}
@@ -216,11 +223,11 @@ func (c *Client) sendImplicitTLS(ctx context.Context, from string, recipients []
 }
 
 func (c *Client) deliver(client *smtp.Client, from string, recipients []string, data []byte) error {
-	if c.User != "" || c.Password != "" {
+	if c.user != "" || c.password != "" {
 		if ok, _ := client.Extension("AUTH"); !ok {
 			return mailer.ErrMissingAuth
 		}
-		if err := client.Auth(smtp.PlainAuth("", c.User, c.Password, c.serverName)); err != nil {
+		if err := client.Auth(smtp.PlainAuth("", c.user, c.password, c.serverName)); err != nil {
 			return err
 		}
 	}
@@ -251,7 +258,7 @@ func (c *Client) deliver(client *smtp.Client, from string, recipients []string, 
 
 func (c *Client) dialPlain(ctx context.Context) (net.Conn, func(), error) {
 	dialer := net.Dialer{Timeout: c.timeout}
-	conn, err := dialer.DialContext(ctx, "tcp", c.Address)
+	conn, err := dialer.DialContext(ctx, "tcp", c.address)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -265,7 +272,7 @@ func (c *Client) dialTLS(ctx context.Context) (net.Conn, func(), error) {
 		NetDialer: dialer,
 		Config:    c.tlsConfig.Clone(),
 	}
-	conn, err := tlsDialer.DialContext(ctx, "tcp", c.Address)
+	conn, err := tlsDialer.DialContext(ctx, "tcp", c.address)
 	if err != nil {
 		return nil, nil, err
 	}

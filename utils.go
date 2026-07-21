@@ -13,6 +13,12 @@ import (
 // parsers instead of arbitrary strings.
 type ValidAddress string
 
+// NormalizeOptions controls optional normalization behavior.
+type NormalizeOptions struct {
+	// StripPlusTag removes everything after the first "+" in the local part.
+	StripPlusTag bool
+}
+
 func (v *ValidAddress) Address() string {
 	return string(*v)
 }
@@ -22,10 +28,23 @@ func (v *ValidAddress) Address() string {
 // Apply the same normalization anywhere the address is stored, matched, or used
 // for verification so those operations stay consistent.
 func (v *ValidAddress) Normalize() {
+	v.NormalizeWithOptions(NormalizeOptions{})
+}
+
+// NormalizeWithOptions canonicalizes the receiver using the supplied options.
+func (v *ValidAddress) NormalizeWithOptions(options NormalizeOptions) {
 	email := strings.ToLower(v.Address())
 	user, host, _ := strings.Cut(email, "@")
-	user, _, _ = strings.Cut(user, "+")
+	if options.StripPlusTag {
+		user, _, _ = strings.Cut(user, "+")
+	}
 	*v = ValidAddress(user + "@" + host)
+}
+
+// StripPlusTag canonicalizes the receiver and removes everything after the
+// first "+" in the local part.
+func (v *ValidAddress) StripPlusTag() {
+	v.NormalizeWithOptions(NormalizeOptions{StripPlusTag: true})
 }
 
 // IsBlacklisted reports whether the receiver's domain matches any blacklist

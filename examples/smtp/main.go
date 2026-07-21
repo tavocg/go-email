@@ -14,13 +14,15 @@ func main() {
 	defer cancel()
 
 	client, err := smtpbackend.NewClient(
-		ctx,
 		"smtp.example.com:587",
 		"username",
 		"password",
 		smtpbackend.WithStartTLS(),
 	)
 	if err != nil {
+		log.Fatal(err)
+	}
+	if err := client.CheckTransport(ctx); err != nil {
 		log.Fatal(err)
 	}
 

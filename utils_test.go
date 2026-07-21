@@ -7,8 +7,28 @@ func TestValidAddressNormalize(t *testing.T) {
 
 	address.Normalize()
 
-	if got, want := address.Address(), "user.name@example.com"; got != want {
+	if got, want := address.Address(), "user.name+tag@example.com"; got != want {
 		t.Fatalf("Normalize() address = %q, want %q", got, want)
+	}
+}
+
+func TestValidAddressStripPlusTag(t *testing.T) {
+	address := ValidAddress("User.Name+tag@Example.COM")
+
+	address.StripPlusTag()
+
+	if got, want := address.Address(), "user.name@example.com"; got != want {
+		t.Fatalf("StripPlusTag() address = %q, want %q", got, want)
+	}
+}
+
+func TestValidAddressNormalizeWithOptions(t *testing.T) {
+	address := ValidAddress("User.Name+tag@Example.COM")
+
+	address.NormalizeWithOptions(NormalizeOptions{StripPlusTag: true})
+
+	if got, want := address.Address(), "user.name@example.com"; got != want {
+		t.Fatalf("NormalizeWithOptions() address = %q, want %q", got, want)
 	}
 }
 

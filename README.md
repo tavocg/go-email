@@ -31,16 +31,23 @@ if err != nil {
 }
 
 address.Normalize()
-fmt.Println(address.Address()) // user.name@example.com
+fmt.Println(address.Address()) // user.name+signup@example.com
 ```
 
 The strict parser trims surrounding whitespace and rejects addresses outside the
 package's documented format. It does not check DNS, deliverability, real TLDs, or
 provider-specific address rules.
 
-`Normalize` lowercases the full address and removes everything after the first
-`+` in the local part. Apply it consistently anywhere addresses are stored or
-compared.
+`Normalize` lowercases the full address. Apply it consistently anywhere
+addresses are stored or compared.
+
+Plus-tag stripping is provider-specific, so it is explicit:
+
+```go
+address.NormalizeWithOptions(email.NormalizeOptions{StripPlusTag: true})
+// or
+address.StripPlusTag()
+```
 
 ## Blacklist Checks
 
@@ -78,17 +85,21 @@ returns `mailer.ErrInvalidHeader`.
 ## SMTP
 
 The SMTP backend supports implicit TLS and STARTTLS. `NewClient` validates the
-address, configures TLS, and probes the configured transport.
+address and configures TLS without touching the network. Use `CheckTransport`
+when you want an explicit startup probe.
 
 ```go
 client, err := smtpbackend.NewClient(
-	ctx,
 	"smtp.example.com:587",
 	"username",
 	"password",
 	smtpbackend.WithStartTLS(),
 )
 if err != nil {
+	return err
+}
+
+if err := client.CheckTransport(ctx); err != nil {
 	return err
 }
 
