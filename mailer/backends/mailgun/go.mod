@@ -1,6 +1,6 @@
 module github.com/tavocg/go-email/mailer/backends/mailgun
 
-go 1.26.2
+go 1.24.0
 
 require (
 	github.com/mailgun/mailgun-go/v5 v5.17.0
