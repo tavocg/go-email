@@ -44,9 +44,7 @@ addresses are stored or compared.
 Plus-tag stripping is provider-specific, so it is explicit:
 
 ```go
-address.NormalizeWithOptions(email.NormalizeOptions{StripPlusTag: true})
-// or
-address.StripPlusTag()
+address.Normalize(email.StripPlusTag())
 ```
 
 ## Blacklist Checks

@@ -12,23 +12,23 @@ func TestValidAddressNormalize(t *testing.T) {
 	}
 }
 
-func TestValidAddressStripPlusTag(t *testing.T) {
+func TestValidAddressNormalizeAppliesOptions(t *testing.T) {
 	address := ValidAddress("User.Name+tag@Example.COM")
 
-	address.StripPlusTag()
+	address.Normalize(StripPlusTag())
 
 	if got, want := address.Address(), "user.name@example.com"; got != want {
-		t.Fatalf("StripPlusTag() address = %q, want %q", got, want)
+		t.Fatalf("Normalize(StripPlusTag()) address = %q, want %q", got, want)
 	}
 }
 
-func TestValidAddressNormalizeWithOptions(t *testing.T) {
+func TestValidAddressNormalizeIgnoresNilOptions(t *testing.T) {
 	address := ValidAddress("User.Name+tag@Example.COM")
 
-	address.NormalizeWithOptions(NormalizeOptions{StripPlusTag: true})
+	address.Normalize(nil)
 
-	if got, want := address.Address(), "user.name@example.com"; got != want {
-		t.Fatalf("NormalizeWithOptions() address = %q, want %q", got, want)
+	if got, want := address.Address(), "user.name+tag@example.com"; got != want {
+		t.Fatalf("Normalize(nil) address = %q, want %q", got, want)
 	}
 }
 
