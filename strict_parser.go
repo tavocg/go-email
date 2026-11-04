@@ -30,10 +30,12 @@ const StrictParserError = errStr("email does not meet StrictParser requirements"
 var strictParserEmailRegexp = regexp.MustCompile(`^(?:[A-Za-z0-9](?:[A-Za-z0-9+\-_]{0,28}[A-Za-z0-9])?(?:\.(?:[A-Za-z0-9](?:[A-Za-z0-9+\-_]{0,28}[A-Za-z0-9])?)){0,15})@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,30}[A-Za-z0-9])?\.){1,4}[A-Za-z]{2,16}$`)
 
 // StrictParser trims surrounding whitespace and validates the address against
-// the package's strict rules.
+// the package's strict rules. Addresses are limited to 254 ASCII bytes and
+// local parts to 64 bytes; the regexp imposes additional conservative limits.
 func StrictParser(email string) (valid *ValidAddress, err error) {
 	email = strings.TrimSpace(email)
-	if len(email) <= 63 && strictParserEmailRegexp.MatchString(email) {
+	local, _, found := strings.Cut(email, "@")
+	if found && len(email) <= 254 && len(local) <= 64 && strictParserEmailRegexp.MatchString(email) {
 		v := ValidAddress(email)
 		return &v, nil
 	}
