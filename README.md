@@ -56,6 +56,19 @@ when no list is provided, the embedded disposable-domain list.
 blocked := address.IsBlacklisted([]string{"example.com"})
 ```
 
+Comparisons ignore case and surrounding whitespace. Entries match the exact
+domain; subdomains need their own entry. Multiple custom lists are checked in
+order, and an explicit nil or empty list checks no domains rather than using
+the default list. Changes to explicitly supplied lists take effect on the next
+call.
+
+The embedded default list is indexed once at startup for expected constant-time lookup
+in the number of configured domains. `blacklist.Contains(domain)` exposes the
+same lookup for domain strings, with optional custom lists. The legacy
+`blacklist.DefaultDomains` variable is an inspection snapshot: modifying it no
+longer changes default filtering. To customize filtering, pass a list explicitly
+to `IsBlacklisted` or `blacklist.Contains`.
+
 ## MIME Messages
 
 The `mailer` package builds MIME bytes suitable for SMTP `DATA` or HTTP API

@@ -1,7 +1,6 @@
 package email
 
 import (
-	"slices"
 	"strings"
 
 	"github.com/tavocg/go-email/blacklist"
@@ -53,22 +52,9 @@ func (v *ValidAddress) Normalize(options ...NormalizeOption) {
 }
 
 // IsBlacklisted reports whether the receiver's domain matches any blacklist
-// entry. When no custom blacklist is provided, it falls back to DefaultBlacklist.
+// entry. With no custom lists, it uses the immutable embedded list. Matching
+// ignores case and surrounding whitespace; subdomains require their own entry.
 func (v *ValidAddress) IsBlacklisted(blacklists ...[]string) bool {
-	lists := blacklists
-	if len(lists) == 0 {
-		lists = [][]string{blacklist.DefaultDomains}
-	}
-
-	// No need to check if host part is found since this is already a valid
-	// email address.
-	_, domain, _ := strings.Cut(strings.ToLower(v.Address()), "@")
-
-	for _, blacklist := range lists {
-		if slices.Contains(blacklist, domain) {
-			return true
-		}
-	}
-
-	return false
+	_, domain, _ := strings.Cut(v.Address(), "@")
+	return blacklist.Contains(domain, blacklists...)
 }
