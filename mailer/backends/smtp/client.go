@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"time"
 
@@ -118,15 +119,33 @@ func (c *Client) Send(ctx context.Context, message *mailer.Message) error {
 		return err
 	}
 
+	from, err := envelopeAddress(message.From)
+	if err != nil {
+		return err
+	}
 	recipients := message.Recipients()
-	if len(recipients) == 0 {
-		return mailer.ErrMissingRecipients
+	for i, recipient := range recipients {
+		recipients[i], err = envelopeAddress(recipient)
+		if err != nil {
+			return err
+		}
 	}
 
 	if c.startTLS {
-		return c.sendStartTLS(ctx, message.From, recipients, data)
+		return c.sendStartTLS(ctx, from, recipients, data)
 	}
-	return c.sendImplicitTLS(ctx, message.From, recipients, data)
+	return c.sendImplicitTLS(ctx, from, recipients, data)
+}
+
+func envelopeAddress(value string) (string, error) {
+	address, err := mail.ParseAddress(value)
+	if err != nil {
+		return "", mailer.ErrInvalidEnvelopeAddress
+	}
+	address.Name = ""
+	// String restores any required local-part quotes; SMTP adds the outer <>.
+	path := address.String()
+	return path[1 : len(path)-1], nil
 }
 
 // CheckTransport verifies that the configured encrypted transport is available.

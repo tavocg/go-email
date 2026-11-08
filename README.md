@@ -86,6 +86,13 @@ The SMTP backend supports implicit TLS and STARTTLS. `NewClient` validates the
 address and configures TLS without touching the network. Use `CheckTransport`
 when you want an explicit startup probe.
 
+Sender and recipient entries may include display names, such as
+`Example App <sender@example.com>`. SMTP uses only the mailbox in `MAIL FROM`
+and `RCPT TO`, preserving local-part quoting when needed. MIME headers retain
+the original display names, and Bcc addresses remain hidden. Each entry must
+contain one valid address; invalid entries return
+`mailer.ErrInvalidEnvelopeAddress` before connecting.
+
 ```go
 client, err := smtpbackend.NewClient(
 	"smtp.example.com:587",
