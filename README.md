@@ -109,6 +109,10 @@ err = client.Send(ctx, message)
 The Mailgun backend uses Mailgun's HTTP API and accepts rendered MIME messages
 from the shared `mailer.Message` type.
 
+The backend is versioned separately and uses the published root module,
+including its MIME header validation. For joint local development, use a Go
+workspace instead of a `replace` directive in the backend's `go.mod`.
+
 ```go
 client, err := mailgun.NewClient("mg.example.com", apiKey)
 if err != nil {
