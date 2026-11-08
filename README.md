@@ -104,6 +104,11 @@ if err := client.CheckTransport(ctx); err != nil {
 err = client.Send(ctx, message)
 ```
 
+`Send` succeeds after the SMTP server confirms acceptance of the message at the
+end of `DATA`. Closing the session with `QUIT` is best effort: a subsequent
+disconnect or failed `QUIT` does not turn an accepted submission into an error.
+A rejection or missing `DATA` acknowledgement still returns an error.
+
 ## Mailgun
 
 The Mailgun backend uses Mailgun's HTTP API and accepts rendered MIME messages

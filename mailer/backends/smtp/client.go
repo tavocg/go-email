@@ -253,7 +253,9 @@ func (c *Client) deliver(client *smtp.Client, from string, recipients []string, 
 		return err
 	}
 
-	return client.Quit()
+	// DATA was accepted; a failed QUIT must not trigger duplicate delivery.
+	_ = client.Quit()
+	return nil
 }
 
 func (c *Client) dialPlain(ctx context.Context) (net.Conn, func(), error) {
