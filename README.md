@@ -147,6 +147,30 @@ if err != nil {
 err = client.Send(ctx, message)
 ```
 
+## Verify account credentials
+
+`email.VerifyCredentials` checks credentials against an explicitly configured SMTP
+server without sending a message. It verifies the server certificate and requires
+TLS 1.2 or newer before sending credentials with SMTP AUTH PLAIN.
+
+```go
+err := email.VerifyCredentials(ctx, email.CredentialsConfig{
+    Address:  "smtp.example.com:587",
+    StartTLS: true,
+}, "user@example.com", password)
+```
+
+For implicit TLS (usually port 465), omit `StartTLS`. STARTTLS mode fails if the
+server cannot upgrade to verified TLS; it never falls back to plaintext.
+`RootCAs` optionally supplies trusted certificate authorities. `Timeout` bounds
+the entire operation and defaults to ten seconds; context cancellation is supported.
+
+A nil error means the SMTP server accepted the credentials. Other errors can
+indicate network, certificate, protocol, or authentication problems, so do not
+interpret every error as an incorrect password. SMTP authentication errors are
+wrapped and can be inspected with `errors.As` using `*textproto.Error`.
+The provider must support SMTP AUTH PLAIN; an application password may be needed.
+
 ## Examples
 
 Runnable examples are available under `examples/`:
